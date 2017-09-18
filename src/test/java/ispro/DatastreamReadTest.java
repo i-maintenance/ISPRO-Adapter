@@ -52,9 +52,11 @@ public class DatastreamReadTest {
 				
 				System.out.println(to.getString("unitOfMeasurement/name"));
 				System.out.println(to.getString("unitOfMeasurement/definition"));
-				STObject sensor = to.followLink("Sensor@iot.navigationLink");
+				STObject sensor = to.getObject("Sensor@iot.navigationLink");
 				System.out.println(sensor.getSelf());
 				System.out.println(to.getString("Sensor@iot.navigationLink/name"));
+				System.out.println(to.getLong("Sensor@iot.navigationLink/@iot.id"));
+				System.out.println(to.getString("Sensor@iot.navigationLink/description"));
 				
 			}
 

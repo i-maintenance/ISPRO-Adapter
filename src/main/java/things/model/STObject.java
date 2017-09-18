@@ -76,7 +76,7 @@ public class STObject {
 	 * @return <code>null</code> when required property is not present
 	 */
 	public STObject getObject(String id) {
-		if ( id.endsWith(NAVIGATION_LINK_SUFFIX)) {
+		if ( id.endsWith(NAVIGATION_LINK_SUFFIX) && json.get(id) instanceof String) {
 			return followLink(id);
 		}
 		JSONObject object = get(JSONObject.class, id, null);
@@ -94,7 +94,11 @@ public class STObject {
 		if ( slash>0) {
 			String part1 = key.substring(0, slash);
 			STObject sub = getObject(part1);
+			
 			if (sub != null ) {
+				if ( json.get(part1) instanceof String) {
+					json.put(part1, sub.json);
+				}
 				// use the remainder to get to the sub-object
 				String remainder = key.substring(slash+1);
 				return sub.get(t, remainder, def);
