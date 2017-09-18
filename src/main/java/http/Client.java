@@ -16,6 +16,7 @@
  *******************************************************************************/
 package http;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
@@ -79,10 +80,12 @@ public class Client {
 		uriBuilder.setPath(p);
 		return this;
 	}
+
 	public Client setContentType(ContentType type) {
 		this.contentType = type;
 		return this;
 	}
+
 	public Client setParameter(String name, String value) {
 		uriBuilder.setParameter(name, value);
 		params.add(new BasicNameValuePair(name, value));
@@ -159,6 +162,52 @@ public class Client {
 		return json;
 	}
 
+	public String doGet() throws IOException, URISyntaxException {
+		CloseableHttpClient httpClient = HttpClients.createDefault();
+		try {
+			HttpGet get = new HttpGet(uriBuilder.build());
+			for (Header h : headers) {
+				get.addHeader(h);
+			}
+			return httpClient.execute(get, new ResponseHandler<String>() {
+				// handle the reult
+				@Override
+				public String handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
+					StatusLine statusLine = response.getStatusLine();
+					HttpEntity entity = response.getEntity();
+					if (statusLine.getStatusCode() >= 300) {
+						throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
+					}
+					if (entity == null) {
+						throw new ClientProtocolException("Response contains no content");
+					}
+					try {
+						//
+						InputStreamReader is = new InputStreamReader(entity.getContent());
+						try {
+							BufferedReader buf = new BufferedReader(is);
+							StringBuffer content = new StringBuffer();
+							String s = null;
+							while (  (s = buf.readLine()) != null) {
+								content.append(s);
+							}
+							return content.toString();
+						} finally {
+							is.close();
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
+
+					}
+					return null;
+				}
+			});
+		} finally {
+			httpClient.close();
+		}
+
+	}
+
 	public <T> T doGet(Class<T> resultClass) throws IOException, URISyntaxException {
 		CloseableHttpClient httpClient = HttpClients.createDefault();
 		try {
@@ -181,8 +230,6 @@ public class Client {
 					ObjectMapper mapper = new ObjectMapper();
 					try {
 						//
-						InputStreamReader reader = new InputStreamReader(entity.getContent());
-						
 						T myObjects = mapper.readValue(entity.getContent(), resultClass);
 						return myObjects;
 					} catch (IOException e) {
@@ -202,10 +249,10 @@ public class Client {
 	}
 
 	public <T> T doPost(Object obj, Class<T> resultClass) throws IOException, URISyntaxException {
-		
+
 		if (obj != null) {
-			if ( obj instanceof Map) {
-				
+			if (obj instanceof Map) {
+
 			}
 			return doPost(serializeToJson(obj), resultClass, this.contentType);
 		} else {
@@ -214,8 +261,10 @@ public class Client {
 		}
 
 	}
+
 	/**
 	 * Perform a POST and send the provided map as form parameter
+	 * 
 	 * @param params
 	 * @param resultClass
 	 * @return
@@ -231,8 +280,10 @@ public class Client {
 		post.setEntity(new UrlEncodedFormEntity(formParams, "UTF-8"));
 		return executePost(post, resultClass);
 	}
+
 	/**
 	 * Create a new http client and send the provided POSt
+	 * 
 	 * @param thePost
 	 * @param resultClass
 	 * @return

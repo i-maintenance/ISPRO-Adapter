@@ -15,13 +15,17 @@ import http.Client;
  *
  */
 public class STObject {
+	private static final String NAVIGATION_LINK_SUFFIX = "@iot.navigationLink";
+	private static final String LOCAL_NAVIGATION_PREFIX = "http://localhost:8080/v1.0/";
 	private final JSONObject json;
+	private final String REMOTE_NAVIGATION_PREFIX;
 	/**
 	 * Constructor requiring a JSONObject
 	 * @param json
 	 */
-	public STObject(JSONObject json) {
+	public STObject(JSONObject json, String prefix) {
 		this.json = json;
+		this.REMOTE_NAVIGATION_PREFIX = prefix;
 	}
 
 	/**
@@ -72,14 +76,17 @@ public class STObject {
 	 * @return <code>null</code> when required property is not present
 	 */
 	public STObject getObject(String id) {
+		if ( id.endsWith(NAVIGATION_LINK_SUFFIX)) {
+			return followLink(id);
+		}
 		JSONObject object = get(JSONObject.class, id, null);
-		return new STObject(object);
+		return new STObject(object, this.REMOTE_NAVIGATION_PREFIX);
 	}
 	/**
 	 * Helper method to retrieve the contained values
-	 * @param t
-	 * @param key
-	 * @param def
+	 * @param t the (expected) type of the value
+	 * @param key The key of the value
+	 * @param def a default value
 	 * @return
 	 */
 	private <T> T get(Class<T> t, String key,  T []def) {
@@ -111,28 +118,35 @@ public class STObject {
 	}
 	/**
 	 * Convenience method to obtain a linked SensorThings object
-	 * @param id
-	 * @return
+	 * @param id The id of the property containing the link to the requested object 
+	 * 
+	 * @return The object if found, null otherwise
 	 */
 	public STObject followLink(String id) {
 		String link = get(String.class, id, null);
 		if ( link != null ) {
+			if ( link.startsWith(LOCAL_NAVIGATION_PREFIX)) {
+				link = link.replace(LOCAL_NAVIGATION_PREFIX, REMOTE_NAVIGATION_PREFIX);
+			}
 			try {
 				String json = new Client(link).doGet();
 				JSONParser parser = new JSONParser();
 				Object o = parser.parse(json);
 				if ( o instanceof JSONObject ) {
-					return new STObject((JSONObject)o);
+					return new STObject((JSONObject)o, REMOTE_NAVIGATION_PREFIX);
 				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+				return null;
 			} catch (URISyntaxException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+				return null;
 			} catch (ParseException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+				return null;
 			}
 		}
 		throw new IllegalArgumentException("Property not found " + id);

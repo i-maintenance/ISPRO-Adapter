@@ -12,7 +12,7 @@ import things.model.STObject;
 public class DatastreamReadTest {
 	@Test
 	public void testDatastream() throws Exception {
-		String s = new Client("http://il060:8082/v1.0")
+		String s = new Client("http://il060:8082/v1.0/")
 			.setPath("DataStreams(2)/Sensor")
 			.doGet();
 		
@@ -38,7 +38,7 @@ public class DatastreamReadTest {
 			
 			Object o = parser.parse(json);
 			if ( o instanceof JSONObject) {
-				STObject to = new STObject((JSONObject)o);
+				STObject to = new STObject((JSONObject)o, "http://il060:8082/v1.0/");
 				System.out.println(to.getLong("@iot.id"));
 				
 				System.out.println(to.getString("unitOfMeasurement/name"));
@@ -47,23 +47,17 @@ public class DatastreamReadTest {
 			if ( o instanceof JSONArray) {
 				Object oList = ((JSONArray) o).get(0);
 				
-				STObject to = new STObject((JSONObject)oList);
+				STObject to = new STObject((JSONObject)oList,"http://il060:8082/v1.0/");
 				System.out.println(to.getLong("@iot.id"));
 				
 				System.out.println(to.getString("unitOfMeasurement/name"));
 				System.out.println(to.getString("unitOfMeasurement/definition"));
 				STObject sensor = to.followLink("Sensor@iot.navigationLink");
+				System.out.println(sensor.getSelf());
+				System.out.println(to.getString("Sensor@iot.navigationLink/name"));
 				
 			}
-//		} catch (JsonParseException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (JsonMappingException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
+
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
