@@ -1,15 +1,22 @@
-package model;
+package ispro.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
+@JsonInclude(value=Include.NON_NULL)
 public class PlantStructure {
-	private String foreignKey1 = "";
-	private String foreignKey2 = "";
-	private int id = 0;
-	private String structureClass;
+	private String foreignKey1 = null;
+	private String foreignKey2 = null;
+	private Integer id = null;
+	private String structureClass = null;
 	public PlantStructure() {
 		// default
 	}
 	public PlantStructure(int id) {
 		this.id = id;
+	}
+	public PlantStructure(String foreignKey1) {
+		this.foreignKey1 = foreignKey1;
 	}
 	public PlantStructure(int id, String key1, String key2) {
 		this.id = id;

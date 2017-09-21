@@ -1,4 +1,4 @@
-package model;
+package ispro.model;
 
 public class Authorisation {
 	private String user;

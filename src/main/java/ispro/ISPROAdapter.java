@@ -6,6 +6,6 @@ package ispro;
  *
  */
 public interface ISPROAdapter {
-	boolean processMessage(String topic, String payload);
+	boolean processMessage(String topic, String key, String payload);
 
 }

@@ -9,7 +9,7 @@ public class ISPROAdapterTest {
 	@Test
 	public void sendDemoAlert() throws Exception {
 		ISPROAdapter adapter = new ISPROAdapterImpl();
-		adapter.processMessage("unused", "a simple payload");
+		adapter.processMessage("unused", "text", "a simple payload");
 		
 	}
 }

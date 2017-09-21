@@ -1,15 +1,18 @@
-package model;
+package ispro.model;
 
 import java.time.Instant;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import model.json.InstantDeserializer;
-import model.json.InstantSerializer;
+import ispro.model.json.InstantDeserializer;
+import ispro.model.json.InstantSerializer;
 
+@JsonInclude(value=Include.NON_NULL)
 public class MaintenanceModel {
-	private int id;
+	private Integer id;
 	private String text;
 	private String note;
 	private String cause;
@@ -19,7 +22,7 @@ public class MaintenanceModel {
 	@JsonDeserialize(using=InstantDeserializer.class)
 	@JsonSerialize(using=InstantSerializer.class)
 	private Instant jobDate;
-	private String maintenanceType;
+	private MaintenanceType maintenanceType;
 	private int priority;
 	private String author;
 	
@@ -72,9 +75,12 @@ public class MaintenanceModel {
 		this.jobDate = jobDate;
 	}
 	public String getMaintenanceType() {
-		return maintenanceType;
+		return maintenanceType.key();
 	}
-	public void setMaintenanceType(String maintenanceType) {
+	public void setMaintenanceType(String type) {
+		this.maintenanceType = MaintenanceType.fromKey(type);
+	}
+	public void setMaintenanceType(MaintenanceType maintenanceType) {
 		this.maintenanceType = maintenanceType;
 	}
 	public int getPriority() {

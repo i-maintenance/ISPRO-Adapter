@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
@@ -17,6 +18,7 @@ import ispro.ISPROAdapter;
 
 public class ISPROConsumer implements Runnable {
 	private final KafkaConsumer<String, String> consumer;
+	private KafkaProducer<String, String> producer;
 	private final String host;
 	private final List<String> topics;
 	private final int id;
@@ -48,7 +50,7 @@ public class ISPROConsumer implements Runnable {
 					data.put("offset", record.offset());
 					data.put("value", record.value());
 					System.out.println(this.id + ": " + data);
-					ispro.processMessage(record.topic(), record.value());
+					ispro.processMessage(record.topic(), record.key(), record.value());
 				}
 			}
 		} catch (WakeupException e) {

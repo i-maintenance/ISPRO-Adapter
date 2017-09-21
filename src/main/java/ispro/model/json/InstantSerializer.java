@@ -1,4 +1,4 @@
-package model.json;
+package ispro.model.json;
 
 import java.io.IOException;
 import java.time.Instant;

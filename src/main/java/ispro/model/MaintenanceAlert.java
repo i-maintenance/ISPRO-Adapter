@@ -1,5 +1,13 @@
-package model;
+package ispro.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+/**
+ * Class representing a maintenance alert
+ * @author dglachs
+ *
+ */
+@JsonInclude(value=Include.NON_NULL)
 public class MaintenanceAlert {
 	private PlantStructure plantStructure;
 	private Authorisation autorisation;

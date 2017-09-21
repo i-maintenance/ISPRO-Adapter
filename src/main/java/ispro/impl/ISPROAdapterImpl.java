@@ -8,41 +8,43 @@ import org.apache.http.entity.ContentType;
 
 import http.Client;
 import ispro.ISPROAdapter;
-import model.Authorisation;
-import model.ISPROResult;
-import model.MaintenanceAlert;
-import model.MaintenanceModel;
-import model.PlantStructure;
+import ispro.model.Authorisation;
+import ispro.model.ISPROResult;
+import ispro.model.MaintenanceAlert;
+import ispro.model.MaintenanceModel;
+import ispro.model.MaintenanceType;
+import ispro.model.PlantStructure;
 
 public class ISPROAdapterImpl implements ISPROAdapter {
 	private static final String maintenanceUri = "http://192.168.48.64/IsproWebApi/External/Maintenance";
 
 	@Override
-	public boolean processMessage(String topic, String payload) {
+	public boolean processMessage(String topic, String key, String payload) {
 		System.out.println(payload);
-		if ( false) {
+		if ( true) {
 			// TODO: inspect payload to check for the proper message
 			PlantStructure plant = new PlantStructure(10, null, null);
 			MaintenanceModel model = new MaintenanceModel();
 			model.setAuthor("ADM");
 			model.setText(payload);
-			model.setCause("Unknown");
+			model.setCause(payload);
 			model.setCauseOfError("Unknown");
 			model.setId(1);
 			model.setJobDate(Instant.now());
-			model.setMaintenanceType("Predictive Alert");
+			model.setMaintenanceType(MaintenanceType.Wartung);
 			model.setPriority(3);
 			model.setTechnician1("Unkown");
 			model.setNote(payload);
 			model.setTechnician1(payload);
 			// now post the alert to ISPRO
 			boolean success = processISPROAlert(plant, model);
-			
+			return success;
 		}
 		return true;
 	}
 	
 	private boolean processISPROAlert(PlantStructure plant, MaintenanceModel model) {
+		// always us this user to report maintenance alerts
 		Authorisation a = new Authorisation("ADM", "20salzb13");
 		MaintenanceAlert alert = new MaintenanceAlert();
 		alert.setPlantStructure(plant);

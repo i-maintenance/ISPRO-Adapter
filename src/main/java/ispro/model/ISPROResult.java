@@ -1,4 +1,4 @@
-package model;
+package ispro.model;
 
 import java.util.List;
 
