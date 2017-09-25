@@ -1,7 +1,6 @@
 package ispro.model.json;
 
 import java.io.IOException;
-import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Period;
 import java.time.format.DateTimeParseException;
