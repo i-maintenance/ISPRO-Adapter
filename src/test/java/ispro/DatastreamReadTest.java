@@ -1,5 +1,7 @@
 package ispro;
 
+import java.util.List;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -10,9 +12,10 @@ import http.Client;
 import things.model.STObject;
 
 public class DatastreamReadTest {
+	private final String SENSORTHINGS_BASE = "http://il060:8082/v1.0/";
 	@Test
 	public void testDatastream() throws Exception {
-		String s = new Client("http://il060:8082/v1.0/")
+		String s = new Client(SENSORTHINGS_BASE)
 			.setPath("DataStreams(2)/Sensor")
 			.doGet();
 		
@@ -36,18 +39,23 @@ public class DatastreamReadTest {
 			//ThingsDataStream s = mapper.readValue(json, ThingsDataStream.class);
 			JSONParser parser = new JSONParser();
 			
-			Object o = parser.parse(json);
+			Object o = parser.parse(s);
 			if ( o instanceof JSONObject) {
-				STObject to = new STObject((JSONObject)o, "http://il060:8082/v1.0/");
+				STObject to = new STObject((JSONObject)o, SENSORTHINGS_BASE);
 				System.out.println(to.getLong("@iot.id"));
+				System.out.println(to.getString("name"));
 				
-				System.out.println(to.getString("unitOfMeasurement/name"));
-				System.out.println(to.getString("unitOfMeasurement/definition"));
+				List<STObject> dStreams = to.getObjects("Datastreams@iot.navigationLink");
+				
+				System.out.println(dStreams.size());
+				for ( STObject st : dStreams) {
+					System.out.println(st.getString("name") +" - "+ st.getString("Sensor@iot.navigationLink/name"));
+				}
 			}
 			if ( o instanceof JSONArray) {
 				Object oList = ((JSONArray) o).get(0);
 				
-				STObject to = new STObject((JSONObject)oList,"http://il060:8082/v1.0/");
+				STObject to = new STObject((JSONObject)oList, SENSORTHINGS_BASE);
 				System.out.println(to.getLong("@iot.id"));
 				
 				System.out.println(to.getString("unitOfMeasurement/name"));

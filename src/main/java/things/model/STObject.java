@@ -2,7 +2,11 @@ package things.model;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -82,6 +86,28 @@ public class STObject {
 		JSONObject object = get(JSONObject.class, id, null);
 		return new STObject(object, this.REMOTE_NAVIGATION_PREFIX);
 	}
+	public List<STObject> getObjects(String id) {
+		if ( id.endsWith(NAVIGATION_LINK_SUFFIX) && json.get(id) instanceof String) {
+			
+			return followLinks(id);
+		}
+		JSONArray array = get(JSONArray.class, id, null);
+		return makeList(array);
+	}
+	private List<STObject> makeList(Object jso) {
+		List<STObject> res = new ArrayList<>();
+		if (jso instanceof JSONArray) {
+			JSONArray array = (JSONArray)jso;
+			for (int i = 0 ; i< array.size(); i++) {
+				Object o = array.get(i);
+				if (o instanceof JSONObject) {
+					JSONObject jsonObj = (JSONObject)o;
+					res.add(new STObject(jsonObj, this.REMOTE_NAVIGATION_PREFIX));
+				}
+			}
+		}
+		return res;
+	}
 	/**
 	 * Helper method to retrieve the contained values
 	 * @param t the (expected) type of the value
@@ -97,6 +123,7 @@ public class STObject {
 			
 			if (sub != null ) {
 				if ( json.get(part1) instanceof String) {
+					// keep
 					json.put(part1, sub.json);
 				}
 				// use the remainder to get to the sub-object
@@ -120,13 +147,7 @@ public class STObject {
 			return null;
 		}
 	}
-	/**
-	 * Convenience method to obtain a linked SensorThings object
-	 * @param id The id of the property containing the link to the requested object 
-	 * 
-	 * @return The object if found, null otherwise
-	 */
-	public STObject followLink(String id) {
+	private List<STObject> followLinks(String id) {
 		String link = get(String.class, id, null);
 		if ( link != null ) {
 			if ( link.startsWith(LOCAL_NAVIGATION_PREFIX)) {
@@ -134,11 +155,18 @@ public class STObject {
 			}
 			try {
 				String json = new Client(link).doGet();
-				JSONParser parser = new JSONParser();
-				Object o = parser.parse(json);
-				if ( o instanceof JSONObject ) {
-					return new STObject((JSONObject)o, REMOTE_NAVIGATION_PREFIX);
-				}
+				
+				return parseList(json);
+//				JSONParser parser = new JSONParser();
+//				Object o = parser.parse(json);
+//				if ( o instanceof JSONObject ) {
+//					JSONObject arrayObject = (JSONObject)o;
+//					JSONArray theArray = (JSarrayObject.get("value");
+//					throw new UnsupportedOperationException("Link points to a list, use followLinks");
+//				}
+//				if ( o instanceof JSONArray ) {
+//					return makeList((JSONArray)o);
+//				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -155,5 +183,60 @@ public class STObject {
 		}
 		throw new IllegalArgumentException("Property not found " + id);
 	}
+	/**
+	 * Convenience method to obtain a linked SensorThings object
+	 * @param id The id of the property containing the link to the requested object 
+	 * 
+	 * @return The object if found, null otherwise
+	 */
+	private STObject followLink(String id) {
+		String link = get(String.class, id, null);
+		if ( link != null ) {
+			if ( link.startsWith(LOCAL_NAVIGATION_PREFIX)) {
+				link = link.replace(LOCAL_NAVIGATION_PREFIX, REMOTE_NAVIGATION_PREFIX);
+			}
+			try {
+				String json = new Client(link).doGet();
+				return parse(json);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null;
+			} catch (URISyntaxException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null;
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null;
+			}
+		}
+		throw new IllegalArgumentException("Property not found " + id);
+	}
+	private STObject parse(String json) throws ParseException {
+		JSONParser parser = new JSONParser();
+		Object o;
+		o = parser.parse(json);
+		if ( o instanceof JSONObject ) {
+			return new STObject((JSONObject)o, REMOTE_NAVIGATION_PREFIX);
+		}
+		return null;
+		
+	}
+	private List<STObject> parseList(String json) throws ParseException {
+		
+		JSONParser parser = new JSONParser();
+		Object o = parser.parse(json);
+		if ( o instanceof JSONObject ) {
+			JSONObject jso = (JSONObject)o;
+			if ( jso.get("value") instanceof JSONArray) {
+				// now create the list
+				return makeList(jso.get("value"));
+			}
 
+		}
+		return new ArrayList<>();
+		
+	}
 }
