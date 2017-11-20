@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class Datastream {
 	@JsonProperty("@iot.id")
-	public Long id;
+	private Long id;
 
 	public Datastream() {
 		// default
@@ -17,4 +17,10 @@ public class Datastream {
 	public Datastream(Long id) {
 		this.id = id;
 	}
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
 }

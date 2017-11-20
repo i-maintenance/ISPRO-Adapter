@@ -126,4 +126,13 @@ public abstract class Message<T extends Result> {
 	public void setParameters(Map<String, String> parameters) {
 		this.parameters = parameters;
 	}
+	public Boolean arrivedInTime() {
+	    if (resultTime!=null && validTime!=null) {
+	        if (Instant.now().isBefore(getResultTime().plus(getValidTime()))) {
+	            return true;
+	        }
+	        return false;
+	    }
+	    return null;
+	}
 }
