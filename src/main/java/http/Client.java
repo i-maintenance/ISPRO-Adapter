@@ -51,385 +51,385 @@ import com.fasterxml.jackson.databind.type.CollectionType;
 
 public class Client {
 
-	private URI uri;
-	private ContentType contentType = ContentType.APPLICATION_JSON;
-	private final URIBuilder uriBuilder;
-	List<NameValuePair> params = new ArrayList<>();
-	List<Header> headers = new ArrayList<>();
+    private URI uri;
+    private ContentType contentType = ContentType.APPLICATION_JSON;
+    private final URIBuilder uriBuilder;
+    List<NameValuePair> params = new ArrayList<>();
+    List<Header> headers = new ArrayList<>();
 
-	public Client(String service) throws URISyntaxException {
-		this.uriBuilder = new URIBuilder(service);
-		this.uri = uriBuilder.build();
+    public Client(String service) throws URISyntaxException {
+	this.uriBuilder = new URIBuilder(service);
+	this.uri = uriBuilder.build();
+    }
+
+    public Client setPath(String path) {
+	String p = uriBuilder.getPath();
+	if (!p.endsWith("/")) {
+	    if (!path.startsWith("/")) {
+		p += "/" + path;
+	    } else {
+		p += path;
+	    }
+	} else {
+	    if (path.startsWith("/")) {
+		p += path.substring(1);
+	    } else {
+		p += path;
+	    }
 	}
+	uriBuilder.setPath(p);
+	return this;
+    }
 
-	public Client setPath(String path) {
-		String p = uriBuilder.getPath();
-		if (!p.endsWith("/")) {
-			if (!path.startsWith("/")) {
-				p += "/" + path;
-			} else {
-				p += path;
-			}
-		} else {
-			if (path.startsWith("/")) {
-				p += path.substring(1);
-			} else {
-				p += path;
-			}
-		}
-		uriBuilder.setPath(p);
-		return this;
-	}
+    public Client setContentType(ContentType type) {
+	this.contentType = type;
+	return this;
+    }
 
-	public Client setContentType(ContentType type) {
-		this.contentType = type;
-		return this;
-	}
+    public Client setParameter(String name, String value) {
+	uriBuilder.setParameter(name, value);
+	params.add(new BasicNameValuePair(name, value));
+	return this;
+    }
 
-	public Client setParameter(String name, String value) {
-		uriBuilder.setParameter(name, value);
-		params.add(new BasicNameValuePair(name, value));
-		return this;
-	}
+    public Client setHeader(String key, String value) {
+	headers.add(new BasicHeader(key, value));
+	return this;
+    }
 
-	public Client setHeader(String key, String value) {
-		headers.add(new BasicHeader(key, value));
-		return this;
-	}
+    public Client setParameter(String name, Number value) {
+	uriBuilder.setParameter(name, value.toString());
+	params.add(new BasicNameValuePair(name, value.toString()));
+	return this;
+    }
 
-	public Client setParameter(String name, Number value) {
-		uriBuilder.setParameter(name, value.toString());
-		params.add(new BasicNameValuePair(name, value.toString()));
-		return this;
-	}
+    public Client setParameter(String name, Boolean bool) {
+	uriBuilder.setParameter(name, bool.toString());
+	params.add(new BasicNameValuePair(name, bool.toString()));
+	return this;
+    }
 
-	public Client setParameter(String name, Boolean bool) {
-		uriBuilder.setParameter(name, bool.toString());
-		params.add(new BasicNameValuePair(name, bool.toString()));
-		return this;
-	}
+    public <T> List<T> doGetList(Class<T> resultClass) throws IOException, URISyntaxException {
 
-	public <T> List<T> doGetList(Class<T> resultClass) throws IOException, URISyntaxException {
+	CloseableHttpClient httpClient = HttpClients.createDefault();
+	try {
+	    HttpGet get = new HttpGet(uriBuilder.build());
+	    for (Header h : headers) {
+		get.addHeader(h);
+	    }
 
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		try {
-			HttpGet get = new HttpGet(uriBuilder.build());
-			for (Header h : headers) {
-				get.addHeader(h);
-			}
-
-			return httpClient.execute(get, new ResponseHandler<List<T>>() {
-				// handle the result
-				@Override
-				public List<T> handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
-					StatusLine statusLine = response.getStatusLine();
-					HttpEntity entity = response.getEntity();
-					if (statusLine.getStatusCode() >= 300) {
-						throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
-					}
-					if (entity == null) {
-						throw new ClientProtocolException("Response contains no content");
-					}
-					ObjectMapper mapper = new ObjectMapper();
-					try {
-						//
-						CollectionType listType = mapper.getTypeFactory().constructCollectionType(List.class,
-								resultClass);
-						List<T> myObjects = mapper.readValue(entity.getContent(), listType);
-						return myObjects;
-					} catch (IOException e) {
-						e.printStackTrace();
-
-					}
-					return new ArrayList<>();
-				}
-			});
-		} finally {
-			httpClient.close();
-		}
-
-	}
-
-	private String serializeToJson(Object object) {
-		ObjectMapper mapper = new ObjectMapper();
-		String json = "";
-		try {
-			json = mapper.writeValueAsString(object);
-			System.out.println(object.getClass().getSimpleName() + ":  " + json);
-		} catch (JsonProcessingException e) {
+	    return httpClient.execute(get, new ResponseHandler<List<T>>() {
+		// handle the result
+		@Override
+		public List<T> handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
+		    StatusLine statusLine = response.getStatusLine();
+		    HttpEntity entity = response.getEntity();
+		    if (statusLine.getStatusCode() >= 300) {
+			throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
+		    }
+		    if (entity == null) {
+			throw new ClientProtocolException("Response contains no content");
+		    }
+		    ObjectMapper mapper = new ObjectMapper();
+		    try {
+			//
+			CollectionType listType = mapper.getTypeFactory().constructCollectionType(List.class,
+				resultClass);
+			List<T> myObjects = mapper.readValue(entity.getContent(), listType);
+			return myObjects;
+		    } catch (IOException e) {
 			e.printStackTrace();
+
+		    }
+		    return new ArrayList<>();
 		}
-		return json;
+	    });
+	} finally {
+	    httpClient.close();
 	}
 
-	public String doGet() throws IOException, URISyntaxException {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		try {
-			HttpGet get = new HttpGet(uriBuilder.build());
-			for (Header h : headers) {
-				get.addHeader(h);
-			}
-			return httpClient.execute(get, new ResponseHandler<String>() {
-				// handle the reult
-				@Override
-				public String handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
-					StatusLine statusLine = response.getStatusLine();
-					HttpEntity entity = response.getEntity();
-					if (statusLine.getStatusCode() >= 300) {
-						throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
-					}
-					if (entity == null) {
-						throw new ClientProtocolException("Response contains no content");
-					}
-					try {
-						//
-						InputStreamReader is = new InputStreamReader(entity.getContent());
-						try {
-							BufferedReader buf = new BufferedReader(is);
-							StringBuffer content = new StringBuffer();
-							String s = null;
-							while (  (s = buf.readLine()) != null) {
-								content.append(s);
-							}
-							return content.toString();
-						} finally {
-							is.close();
-						}
-					} catch (IOException e) {
-						e.printStackTrace();
+    }
 
-					}
-					return null;
-				}
-			});
-		} finally {
-			httpClient.close();
-		}
-
+    private String serializeToJson(Object object) {
+	ObjectMapper mapper = new ObjectMapper();
+	String json = "";
+	try {
+	    json = mapper.writeValueAsString(object);
+	    System.out.println(object.getClass().getSimpleName() + ":  " + json);
+	} catch (JsonProcessingException e) {
+	    e.printStackTrace();
 	}
+	return json;
+    }
 
-	public <T> T doGet(Class<T> resultClass) throws IOException, URISyntaxException {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		try {
-			HttpGet get = new HttpGet(uriBuilder.build());
-			for (Header h : headers) {
-				get.addHeader(h);
-			}
-			return httpClient.execute(get, new ResponseHandler<T>() {
-				// handle the reult
-				@Override
-				public T handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
-					StatusLine statusLine = response.getStatusLine();
-					HttpEntity entity = response.getEntity();
-					if (statusLine.getStatusCode() >= 300) {
-						throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
-					}
-					if (entity == null) {
-						throw new ClientProtocolException("Response contains no content");
-					}
-					ObjectMapper mapper = new ObjectMapper();
-					try {
-						//
-						T myObjects = mapper.readValue(entity.getContent(), resultClass);
-						return myObjects;
-					} catch (IOException e) {
-						e.printStackTrace();
-
-					}
-					return null;
-				}
-			});
-		} finally {
-			httpClient.close();
-		}
-	}
-
-	public <T> T doPost(Class<T> resultClass) throws IOException, URISyntaxException {
-		return doPost(null, resultClass);
-	}
-
-	public <T> T doPost(Object obj, Class<T> resultClass) throws IOException, URISyntaxException {
-
-		if (obj != null) {
-			if (obj instanceof Map) {
-
-			}
-			return doPost(serializeToJson(obj), resultClass, this.contentType);
-		} else {
-			// required when no
-			return doPost((String) null, resultClass, this.contentType);
-		}
-
-	}
-
-	/**
-	 * Perform a POST and send the provided map as form parameter
-	 * 
-	 * @param params
-	 * @param resultClass
-	 * @return
-	 * @throws IOException
-	 * @throws URISyntaxException
-	 */
-	public <T> T doPost(Map<String, String> params, Class<T> resultClass) throws IOException, URISyntaxException {
-		HttpPost post = new HttpPost(uriBuilder.build());
-		List<NameValuePair> formParams = new ArrayList<>();
-		for (String key : params.keySet()) {
-			formParams.add(new BasicNameValuePair(key, params.get(key)));
-		}
-		post.setEntity(new UrlEncodedFormEntity(formParams, "UTF-8"));
-		return executePost(post, resultClass);
-	}
-
-	/**
-	 * Create a new http client and send the provided POSt
-	 * 
-	 * @param thePost
-	 * @param resultClass
-	 * @return
-	 * @throws IOException
-	 * @throws URISyntaxException
-	 */
-	private <T> T executePost(HttpPost thePost, Class<T> resultClass) throws IOException, URISyntaxException {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		try {
-			return httpClient.execute(thePost, new ResponseHandler<T>() {
-
-				@Override
-				public T handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
-					StatusLine statusLine = response.getStatusLine();
-					HttpEntity entity = response.getEntity();
-					if (statusLine.getStatusCode() >= 300) {
-						throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
-					}
-					if (entity == null) {
-						throw new ClientProtocolException("Response contains no content");
-					} else {
-						if (entity.getContentLength() == 0) {
-							if (resultClass.isAssignableFrom(Boolean.class) && statusLine.getStatusCode() == 200) {
-								return resultClass.cast(Boolean.TRUE);
-							}
-
-						}
-					}
-					ObjectMapper mapper = new ObjectMapper();
-					try {
-						//
-						T myObjects = mapper.readValue(entity.getContent(), resultClass);
-						return myObjects;
-					} catch (IOException e) {
-						e.printStackTrace();
-
-					}
-					return null;
-				}
-			});
-		} finally {
-			httpClient.close();
-		}
-	}
-
-	public <T> T doPost(String jsonString, Class<T> resultClass, ContentType contentType)
-			throws IOException, URISyntaxException {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		try {
-			HttpPost post = new HttpPost(uriBuilder.build());
+    public String doGet() throws IOException, URISyntaxException {
+	CloseableHttpClient httpClient = HttpClients.createDefault();
+	try {
+	    HttpGet get = new HttpGet(uriBuilder.build());
+	    for (Header h : headers) {
+		get.addHeader(h);
+	    }
+	    return httpClient.execute(get, new ResponseHandler<String>() {
+		// handle the reult
+		@Override
+		public String handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
+		    StatusLine statusLine = response.getStatusLine();
+		    HttpEntity entity = response.getEntity();
+		    if (statusLine.getStatusCode() >= 300) {
+			throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
+		    }
+		    if (entity == null) {
+			throw new ClientProtocolException("Response contains no content");
+		    }
+		    try {
 			//
-			if (contentType.equals(ContentType.APPLICATION_FORM_URLENCODED) && params.size() > 0) {
-				// create a new post
-				post = new HttpPost(uri);
-				post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-
-			} else {
-				if (jsonString != null) {
-					HttpEntity entity = new StringEntity(jsonString, contentType);
-					post.setEntity(entity);
-				}
-
+			InputStreamReader is = new InputStreamReader(entity.getContent());
+			try {
+			    BufferedReader buf = new BufferedReader(is);
+			    StringBuffer content = new StringBuffer();
+			    String s = null;
+			    while ((s = buf.readLine()) != null) {
+				content.append(s);
+			    }
+			    return content.toString();
+			} finally {
+			    is.close();
 			}
-			for (Header h : headers) {
-				post.addHeader(h);
-			}
+		    } catch (IOException e) {
+			e.printStackTrace();
 
-			return httpClient.execute(post, new ResponseHandler<T>() {
-
-				@Override
-				public T handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
-					StatusLine statusLine = response.getStatusLine();
-					HttpEntity entity = response.getEntity();
-					if (statusLine.getStatusCode() >= 300) {
-						throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
-					}
-					if (entity == null) {
-						throw new ClientProtocolException("Response contains no content");
-					} else {
-						if (entity.getContentLength() == 0) {
-							if (resultClass.isAssignableFrom(Boolean.class) && statusLine.getStatusCode() == 200) {
-								return resultClass.cast(Boolean.TRUE);
-							}
-
-						}
-					}
-					ObjectMapper mapper = new ObjectMapper();
-					try {
-						//
-						T myObjects = mapper.readValue(entity.getContent(), resultClass);
-						return myObjects;
-					} catch (IOException e) {
-						e.printStackTrace();
-
-					}
-					return null;
-				}
-			});
-		} finally {
-			httpClient.close();
+		    }
+		    return null;
 		}
+	    });
+	} finally {
+	    httpClient.close();
 	}
 
-	public <T> T doDelete(Class<T> resultClass) throws IOException, URISyntaxException {
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		try {
-			HttpDelete delete = new HttpDelete(uriBuilder.build());
+    }
+
+    public <T> T doGet(Class<T> resultClass) throws IOException, URISyntaxException {
+	CloseableHttpClient httpClient = HttpClients.createDefault();
+	try {
+	    HttpGet get = new HttpGet(uriBuilder.build());
+	    for (Header h : headers) {
+		get.addHeader(h);
+	    }
+	    return httpClient.execute(get, new ResponseHandler<T>() {
+		// handle the reult
+		@Override
+		public T handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
+		    StatusLine statusLine = response.getStatusLine();
+		    HttpEntity entity = response.getEntity();
+		    if (statusLine.getStatusCode() >= 300) {
+			throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
+		    }
+		    if (entity == null) {
+			throw new ClientProtocolException("Response contains no content");
+		    }
+		    ObjectMapper mapper = new ObjectMapper();
+		    try {
 			//
-			for (Header h : headers) {
-				delete.addHeader(h);
-			}
+			T myObjects = mapper.readValue(entity.getContent(), resultClass);
+			return myObjects;
+		    } catch (IOException e) {
+			e.printStackTrace();
 
-			return httpClient.execute(delete, new ResponseHandler<T>() {
-
-				@Override
-				public T handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
-					StatusLine statusLine = response.getStatusLine();
-					HttpEntity entity = response.getEntity();
-					if (statusLine.getStatusCode() >= 300) {
-						throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
-					}
-					if (entity == null) {
-						throw new ClientProtocolException("Response contains no content");
-					} else {
-						if (entity.getContentLength() == 0) {
-							if (resultClass.isAssignableFrom(Boolean.class) && statusLine.getStatusCode() == 200) {
-								return resultClass.cast(Boolean.TRUE);
-							}
-
-						}
-					}
-					ObjectMapper mapper = new ObjectMapper();
-					try {
-						//
-						T myObjects = mapper.readValue(entity.getContent(), resultClass);
-						return myObjects;
-					} catch (IOException e) {
-						e.printStackTrace();
-
-					}
-					return null;
-				}
-			});
-		} finally {
-			httpClient.close();
+		    }
+		    return null;
 		}
+	    });
+	} finally {
+	    httpClient.close();
 	}
+    }
+
+    public <T> T doPost(Class<T> resultClass) throws IOException, URISyntaxException {
+	return doPost(null, resultClass);
+    }
+
+    public <T> T doPost(Object obj, Class<T> resultClass) throws IOException, URISyntaxException {
+
+	if (obj != null) {
+	    if (obj instanceof Map) {
+
+	    }
+	    return doPost(serializeToJson(obj), resultClass, this.contentType);
+	} else {
+	    // required when no
+	    return doPost((String) null, resultClass, this.contentType);
+	}
+
+    }
+
+    /**
+     * Perform a POST and send the provided map as form parameter
+     * 
+     * @param params
+     * @param resultClass
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    public <T> T doPost(Map<String, String> params, Class<T> resultClass) throws IOException, URISyntaxException {
+	HttpPost post = new HttpPost(uriBuilder.build());
+	List<NameValuePair> formParams = new ArrayList<>();
+	for (String key : params.keySet()) {
+	    formParams.add(new BasicNameValuePair(key, params.get(key)));
+	}
+	post.setEntity(new UrlEncodedFormEntity(formParams, "UTF-8"));
+	return executePost(post, resultClass);
+    }
+
+    /**
+     * Create a new http client and send the provided POSt
+     * 
+     * @param thePost
+     * @param resultClass
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    private <T> T executePost(HttpPost thePost, Class<T> resultClass) throws IOException, URISyntaxException {
+	CloseableHttpClient httpClient = HttpClients.createDefault();
+	try {
+	    return httpClient.execute(thePost, new ResponseHandler<T>() {
+
+		@Override
+		public T handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
+		    StatusLine statusLine = response.getStatusLine();
+		    HttpEntity entity = response.getEntity();
+		    if (statusLine.getStatusCode() >= 300) {
+			throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
+		    }
+		    if (entity == null) {
+			throw new ClientProtocolException("Response contains no content");
+		    } else {
+			if (entity.getContentLength() == 0) {
+			    if (resultClass.isAssignableFrom(Boolean.class) && statusLine.getStatusCode() == 200) {
+				return resultClass.cast(Boolean.TRUE);
+			    }
+
+			}
+		    }
+		    ObjectMapper mapper = new ObjectMapper();
+		    try {
+			//
+			T myObjects = mapper.readValue(entity.getContent(), resultClass);
+			return myObjects;
+		    } catch (IOException e) {
+			e.printStackTrace();
+
+		    }
+		    return null;
+		}
+	    });
+	} finally {
+	    httpClient.close();
+	}
+    }
+
+    public <T> T doPost(String jsonString, Class<T> resultClass, ContentType contentType)
+	    throws IOException, URISyntaxException {
+	CloseableHttpClient httpClient = HttpClients.createDefault();
+	try {
+	    HttpPost post = new HttpPost(uriBuilder.build());
+	    //
+	    if (contentType.equals(ContentType.APPLICATION_FORM_URLENCODED) && params.size() > 0) {
+		// create a new post
+		post = new HttpPost(uri);
+		post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+
+	    } else {
+		if (jsonString != null) {
+		    HttpEntity entity = new StringEntity(jsonString, contentType);
+		    post.setEntity(entity);
+		}
+
+	    }
+	    for (Header h : headers) {
+		post.addHeader(h);
+	    }
+
+	    return httpClient.execute(post, new ResponseHandler<T>() {
+
+		@Override
+		public T handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
+		    StatusLine statusLine = response.getStatusLine();
+		    HttpEntity entity = response.getEntity();
+		    if (statusLine.getStatusCode() >= 300) {
+			throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
+		    }
+		    if (entity == null) {
+			throw new ClientProtocolException("Response contains no content");
+		    } else {
+			if (entity.getContentLength() == 0) {
+			    if (resultClass.isAssignableFrom(Boolean.class) && statusLine.getStatusCode() == 200) {
+				return resultClass.cast(Boolean.TRUE);
+			    }
+
+			}
+		    }
+		    ObjectMapper mapper = new ObjectMapper();
+		    try {
+			//
+			T myObjects = mapper.readValue(entity.getContent(), resultClass);
+			return myObjects;
+		    } catch (IOException e) {
+			e.printStackTrace();
+
+		    }
+		    return null;
+		}
+	    });
+	} finally {
+	    httpClient.close();
+	}
+    }
+
+    public <T> T doDelete(Class<T> resultClass) throws IOException, URISyntaxException {
+	CloseableHttpClient httpClient = HttpClients.createDefault();
+	try {
+	    HttpDelete delete = new HttpDelete(uriBuilder.build());
+	    //
+	    for (Header h : headers) {
+		delete.addHeader(h);
+	    }
+
+	    return httpClient.execute(delete, new ResponseHandler<T>() {
+
+		@Override
+		public T handleResponse(HttpResponse response) throws ClientProtocolException, IOException {
+		    StatusLine statusLine = response.getStatusLine();
+		    HttpEntity entity = response.getEntity();
+		    if (statusLine.getStatusCode() >= 300) {
+			throw new HttpResponseException(statusLine.getStatusCode(), statusLine.getReasonPhrase());
+		    }
+		    if (entity == null) {
+			throw new ClientProtocolException("Response contains no content");
+		    } else {
+			if (entity.getContentLength() == 0) {
+			    if (resultClass.isAssignableFrom(Boolean.class) && statusLine.getStatusCode() == 200) {
+				return resultClass.cast(Boolean.TRUE);
+			    }
+
+			}
+		    }
+		    ObjectMapper mapper = new ObjectMapper();
+		    try {
+			//
+			T myObjects = mapper.readValue(entity.getContent(), resultClass);
+			return myObjects;
+		    } catch (IOException e) {
+			e.printStackTrace();
+
+		    }
+		    return null;
+		}
+	    });
+	} finally {
+	    httpClient.close();
+	}
+    }
 
 }
