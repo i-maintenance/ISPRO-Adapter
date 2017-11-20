@@ -17,7 +17,7 @@ public class Main {
 	public static void main(String[] args) {
 		int numConsumers = 3;
 		String groupId = "imaintenance-ispro-group";
-		List<String> topics = Arrays.asList("ipn-maintenance-alert");
+		List<String> topics = Arrays.asList("Malfunctions");
 		ExecutorService executor = Executors.newFixedThreadPool(numConsumers);
 
 		final List<ISPROConsumer> consumers = new ArrayList<>();
