@@ -12,19 +12,19 @@ import ispro.model.json.InstantSerializer;
 
 @JsonInclude(value=Include.NON_NULL)
 public class MaintenanceModel {
-	private Integer id;
-	private String text;
-	private String note;
-	private String cause;
-	private String causeOfError;
-	private int operatingHours;
-	private String technician1;
+	private Integer id = 0;
+	private String text = "";
+	private String note = "";
+	private String cause = "";
+	private String causeOfError= "";
+	private int operatingHours = 0;
+	private String technician1 = "";
 	@JsonDeserialize(using=InstantDeserializer.class)
 	@JsonSerialize(using=InstantSerializer.class)
 	private Instant jobDate;
-	private MaintenanceType maintenanceType;
-	private int priority;
-	private String author;
+	private MaintenanceType maintenanceType = MaintenanceType.Wartung;
+	private int priority  = 1;
+	private String author = "";
 	
 	public int getId() {
 		return id;

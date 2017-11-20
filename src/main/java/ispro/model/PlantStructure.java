@@ -35,10 +35,10 @@ public class PlantStructure {
 	public void setForeignKey2(String foreignKey2) {
 		this.foreignKey2 = foreignKey2;
 	}
-	public int getId() {
+	public Integer getId() {
 		return id;
 	}
-	public void setId(int id) {
+	public void setId(Integer id) {
 		this.id = id;
 	}
 	public String getStructureClass() {
