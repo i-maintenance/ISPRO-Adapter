@@ -17,14 +17,14 @@ public class Main {
 	public static void main(String[] args) {
 		int numConsumers = 3;
 		String groupId = "imaintenance-ispro-group";
-		List<String> topics = Arrays.asList("Malfunctions");
+		List<String> topics = Arrays.asList("Malfunctions", "SensorData");
 		ExecutorService executor = Executors.newFixedThreadPool(numConsumers);
 
 		final List<ISPROConsumer> consumers = new ArrayList<>();
 		final ISPROAdapter isproAdapter = new ISPROAdapterImpl();
 		for (int i = 0; i < numConsumers; i++) {
 			// 
-			ISPROConsumer consumer = new ISPROConsumer(i, "il061:9092", groupId, isproAdapter, topics);
+			ISPROConsumer consumer = new ISPROConsumer(i, "il061:9092,il062:9092", groupId, isproAdapter, topics);
 			consumers.add(consumer);
 			executor.submit(consumer);
 		}
