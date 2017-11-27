@@ -2,7 +2,9 @@ package ispro.impl;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.Period;
 
 import org.apache.http.entity.ContentType;
 
@@ -11,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import http.Client;
 import ipn.Message;
 import ipn.SimpleAlert;
+import ipn.TimeRemaining;
 import ispro.ISPROAdapter;
 import ispro.model.Authorisation;
 import ispro.model.ISPROResult;
@@ -24,6 +27,19 @@ import things.model.STObject;
 public class ISPROAdapterImpl implements ISPROAdapter {
     private static final String maintenanceUri = "http://192.168.48.64/IsproWebApi/External/Maintenance";
 
+    public boolean processMessage(Message<?> message) {
+        Long id = message.getDatastream().getId();
+        if ( Instant.now().isBefore(message.getResultTime().plus(message.getValidTime()) ) ) {
+            if (message.getResult() instanceof SimpleAlert) {
+                // 
+                return processSimpleAlert(id, (SimpleAlert)message.getResult());
+            }
+            if (message.getResult() instanceof TimeRemaining) {
+                return processRemainingTimeAlert(id, (TimeRemaining)message.getResult());
+            }
+        }
+        return true;
+    }
     @Override
     public boolean processMessage(String topic, String key, String payload) {
         System.out.println(payload);
@@ -33,42 +49,70 @@ public class ISPROAdapterImpl implements ISPROAdapter {
             case "remainingTimeAlert":
             case "qualityAlert":
                 Message<?> m = parsePayload(payload);
+                return processMessage(m);
                 // currently only SimpleAlert are sent / checked
-                if (m.getResult() instanceof SimpleAlert) {
-                    SimpleAlert alert = (SimpleAlert)m.getResult();
-                    STObject stream = STClient.getDatastream(m.getDatastream().getId());
-                    // obtaint the description
-                    STObject thing = stream.getObject("Thing@iot.navigationLink");
-                    String description = thing.getString("description");
-                    // obtain a value from the properties
-                    String thing_uuid = thing.getString("properties/isprong_uuid");
-                    if ( thing_uuid!=null) {
-                        // the resultTime holds the time of creating the message
-                        // the validTime denotes the time range of the validity (eg. PT1M for 1 minute)!
-                        if ( Instant.now().isBefore(m.getResultTime().plus(m.getValidTime()) ) ) {
-                            PlantStructure plant = new PlantStructure(thing_uuid);
-                            MaintenanceModel maintenanceModel = new MaintenanceModel();
-                            maintenanceModel.setNote(description);
-                            maintenanceModel.setCause(description);
-                            maintenanceModel.setCauseOfError(alert.getText());
-                            maintenanceModel.setText(alert.getText());
-                            //maintenanceModel.setAuthor(this.getClass().getSimpleName());
-                            maintenanceModel.setJobDate(Instant.now());
-                            maintenanceModel.setMaintenanceType(MaintenanceType.Wartung);
-                            // send to ISPRO
-                            processISPROAlert(plant, maintenanceModel);
-                        }
-                        else {
-                            // message arrived too late
-                            // TODO: react accordingly
-                        }
-                    }
-                }
-                break;
             }
         }
 
         return true;
+    }
+    private boolean processRemainingTimeAlert(Long dsId, TimeRemaining remaining) {
+        STObject stream = STClient.getDatastream(dsId);
+        // obtaint the description
+        STObject thing = stream.getObject("Thing@iot.navigationLink");
+        String description = thing.getString("description");
+        // obtain a value from the properties
+        String thing_uuid = thing.getString("properties/isprong_uuid");
+        if ( thing_uuid!=null) {
+            // the resultTime holds the time of creating the message
+            // the validTime denotes the time range of the validity (eg. PT1M for 1 minute)!
+            PlantStructure plant = new PlantStructure(thing_uuid);
+            MaintenanceModel maintenanceModel = new MaintenanceModel();
+            maintenanceModel.setNote(description);
+            maintenanceModel.setCause(description);
+            maintenanceModel.setCauseOfError(remaining.getText());
+            if (remaining.getRemainingTime() instanceof Duration) {
+                Duration d = (Duration) remaining.getRemainingTime();
+                maintenanceModel.setText(String.format("RemainingTime: %s (Confidence %s)", d.toHours(), remaining.getConfidence().toString()));
+                
+            }
+            if (remaining.getRemainingTime() instanceof Period ) {
+                Period d = (Period) remaining.getRemainingTime();
+                maintenanceModel.setText(String.format("RemainingTime: %s (Confidence %s)", d.getDays(), remaining.getConfidence().toString()));
+                
+            }
+            //maintenanceModel.setAuthor(this.getClass().getSimpleName());
+            maintenanceModel.setJobDate(Instant.now());
+            maintenanceModel.setMaintenanceType(MaintenanceType.Wartung);
+            // send to ISPRO
+            return processISPROAlert(plant, maintenanceModel);
+        }
+
+        return false;
+    }
+    private boolean processSimpleAlert(Long dsId, SimpleAlert alert) {
+        STObject stream = STClient.getDatastream(dsId);
+        // obtaint the description
+        STObject thing = stream.getObject("Thing@iot.navigationLink");
+        String description = thing.getString("description");
+        // obtain a value from the properties
+        String thing_uuid = thing.getString("properties/isprong_uuid");
+        if ( thing_uuid!=null) {
+            // the resultTime holds the time of creating the message
+            // the validTime denotes the time range of the validity (eg. PT1M for 1 minute)!
+            PlantStructure plant = new PlantStructure(thing_uuid);
+            MaintenanceModel maintenanceModel = new MaintenanceModel();
+            maintenanceModel.setNote(description);
+            maintenanceModel.setCause(description);
+            maintenanceModel.setCauseOfError(alert.getText());
+            maintenanceModel.setText(alert.getText());
+            //maintenanceModel.setAuthor(this.getClass().getSimpleName());
+            maintenanceModel.setJobDate(Instant.now());
+            maintenanceModel.setMaintenanceType(MaintenanceType.Wartung);
+            // send to ISPRO
+            return processISPROAlert(plant, maintenanceModel);
+        }
+        return false;
     }
 
     private Message<?> parsePayload(String payload) {
