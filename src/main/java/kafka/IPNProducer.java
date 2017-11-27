@@ -73,7 +73,18 @@ public class IPNProducer {
 			// TODO: decide what to do
 		}
 	}
-
+	// send the created message
+	public void sendAlert(String topic, String key, Message<?> message, Callback callback) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            String json = mapper.writeValueAsString(message);
+            ProducerRecord<String, String> record = new ProducerRecord<String, String>(topic, key, json);
+            producer.send(record, callback);
+        } catch (JsonProcessingException e) {
+            // TODO: decide what to do
+        }
+	    
+	}
 	public void shutdown() {
 		producer.close();
 	}
