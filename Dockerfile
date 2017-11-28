@@ -1,4 +1,4 @@
-FROM openjdk:7
+FROM openjdk:8
 
 # copy resources
 WORKDIR /usr/src/app
