@@ -1,13 +1,9 @@
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 
-import ispro.ISPROAdapter;
-import ispro.impl.ISPROAdapterImpl;
-import kafka.ISPROConsumer;
+import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
+import eu.imaintenance.toolset.ToolsetClient;
+import ispro.impl.ISPROHandler;
 /**
  * Dummy runner
  * @author dglachs
@@ -15,34 +11,18 @@ import kafka.ISPROConsumer;
  */
 public class Main {
 	public static void main(String[] args) {
-		int numConsumers = 3;
-		String groupId = "imaintenance-ispro-group";
-		List<String> topics = Arrays.asList("Malfunctions", "SensorData");
-		ExecutorService executor = Executors.newFixedThreadPool(numConsumers);
-
-		final List<ISPROConsumer> consumers = new ArrayList<>();
-		final ISPROAdapter isproAdapter = new ISPROAdapterImpl();
-		for (int i = 0; i < numConsumers; i++) {
-			// 
-			ISPROConsumer consumer = new ISPROConsumer(i, "il061:9092,il062:9092", groupId, isproAdapter, topics);
-			consumers.add(consumer);
-			executor.submit(consumer);
-		}
-
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			@Override
-			public void run() {
-				for (ISPROConsumer consumer : consumers) {
-					consumer.shutdown();
-				}
-				executor.shutdown();
-				try {
-					executor.awaitTermination(5000, TimeUnit.MILLISECONDS);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		});
+	    try {
+            new ToolsetClient()
+                    .withServiceUri("http://il060:8082/v1.0/")
+                    .setName("ISPROClient")
+                    .registerHandler(new ISPROHandler(), 30l)
+                    .startup();
+        } catch (MalformedURLException | URISyntaxException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        } catch (ServiceFailureException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
 	}
-
 }

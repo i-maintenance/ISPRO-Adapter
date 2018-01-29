@@ -7,69 +7,70 @@ import java.time.Instant;
 import java.time.Period;
 
 import org.apache.http.entity.ContentType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import de.fraunhofer.iosb.ilt.sta.ServiceFailureException;
+import de.fraunhofer.iosb.ilt.sta.model.Datastream;
+import de.fraunhofer.iosb.ilt.sta.model.Observation;
+import de.fraunhofer.iosb.ilt.sta.model.Thing;
+import eu.imaintenance.toolset.observation.AbstractObservationHandler;
 import http.Client;
-import ipn.Message;
+import ipn.IPNAlert;
 import ipn.SimpleAlert;
 import ipn.TimeRemaining;
-import ispro.ISPROAdapter;
 import ispro.model.Authorisation;
 import ispro.model.ISPROResult;
 import ispro.model.MaintenanceAlert;
 import ispro.model.MaintenanceModel;
 import ispro.model.MaintenanceType;
 import ispro.model.PlantStructure;
-import things.model.STClient;
-import things.model.STObject;
 
-public class ISPROAdapterImpl implements ISPROAdapter {
-    private static final String maintenanceUri = "http://192.168.48.64/IsproWebApi/External/Maintenance";
+public class ISPROHandler extends AbstractObservationHandler<IPNAlert> {
+    // Service Endpoint isproNG
+    private final String maintenanceUri;
 
-    public boolean processMessage(Message<?> message) {
-        Long id = message.getDatastream().getId();
-        if ( Instant.now().isBefore(message.getResultTime().plus(message.getValidTime()) ) ) {
-            if (message.getResult() instanceof SimpleAlert) {
-                // 
-                return processSimpleAlert(id, (SimpleAlert)message.getResult());
-            }
-            if (message.getResult() instanceof TimeRemaining) {
-                return processRemainingTimeAlert(id, (TimeRemaining)message.getResult());
-            }
-        }
-        return true;
+    Logger logger = LoggerFactory.getLogger(ISPROHandler.class);
+    public ISPROHandler() {
+        this.maintenanceUri = "http://192.168.48.64/IsproWebApi/External/Maintenance";
+
     }
+    public ISPROHandler(String maintenanceUri) throws URISyntaxException {
+        this.maintenanceUri = maintenanceUri;
+    }
+
     @Override
-    public boolean processMessage(String topic, String key, String payload) {
-        System.out.println(payload);
-        if (key != null) {
-            switch (key) {
-            case "alert":
-            case "remainingTimeAlert":
-            case "qualityAlert":
-                Message<?> m = parsePayload(payload);
-                return processMessage(m);
-                // currently only SimpleAlert are sent / checked
+    public void onObservation(Observation observation, IPNAlert result) {
+        // handle IPN Results
+        try {
+            Datastream stream = observation.getDatastream();
+            Thing thing = stream.getThing();
+           
+            if ( result instanceof SimpleAlert) {
+                processSimpleAlert(thing, stream, observation, (SimpleAlert) result);
             }
+            else if ( result instanceof TimeRemaining) {
+                processTimeRemainingAlert(thing, stream, observation, (TimeRemaining) result);
+            }
+            else {
+                logger.debug(String.format("Received result of type [%s], Handler not yet implemented!", result.getClass().getSimpleName() ));
+            }
+            //
+        } catch (ServiceFailureException e) {
+           logger.error(e.getLocalizedMessage(), e);
         }
 
-        return true;
     }
-    private boolean processRemainingTimeAlert(Long dsId, TimeRemaining remaining) {
-        STObject stream = STClient.getDatastream(dsId);
-        // obtaint the description
-        STObject thing = stream.getObject("Thing@iot.navigationLink");
-        String description = thing.getString("description");
-        // obtain a value from the properties
-        String thing_uuid = thing.getString("properties/isprong_uuid");
-        if ( thing_uuid!=null) {
-            // the resultTime holds the time of creating the message
-            // the validTime denotes the time range of the validity (eg. PT1M for 1 minute)!
-            PlantStructure plant = new PlantStructure(thing_uuid);
+    private boolean processTimeRemainingAlert(Thing thing, Datastream stream, Observation observation, TimeRemaining remaining) {
+        
+        Object fk1 = thing.getProperties().get("isprong_uuid");
+
+        if ( fk1!=null) {
+            
+            PlantStructure plant = new PlantStructure(fk1.toString());
             MaintenanceModel maintenanceModel = new MaintenanceModel();
-            maintenanceModel.setNote(description);
-            maintenanceModel.setCause(description);
+            maintenanceModel.setNote(thing.getDescription());
+            maintenanceModel.setCause(thing.getName());
             maintenanceModel.setCauseOfError(remaining.getText());
             if (remaining.getRemainingTime() instanceof Duration) {
                 Duration d = (Duration) remaining.getRemainingTime();
@@ -88,23 +89,21 @@ public class ISPROAdapterImpl implements ISPROAdapter {
             return processISPROAlert(plant, maintenanceModel);
         }
 
+
         return false;
     }
-    private boolean processSimpleAlert(Long dsId, SimpleAlert alert) {
-        STObject stream = STClient.getDatastream(dsId);
-        // obtaint the description
-        STObject thing = stream.getObject("Thing@iot.navigationLink");
-        String description = thing.getString("description");
+    private boolean processSimpleAlert(Thing thing, Datastream stream, Observation observation, SimpleAlert alert) {
         // obtain a value from the properties
-        String thing_uuid = thing.getString("properties/isprong_uuid");
-        if ( thing_uuid!=null) {
+        Object fk1 = thing.getProperties().get("isprong_uuid");
+
+        if ( fk1!=null) {
             // the resultTime holds the time of creating the message
             // the validTime denotes the time range of the validity (eg. PT1M for 1 minute)!
-            PlantStructure plant = new PlantStructure(thing_uuid);
+            PlantStructure plant = new PlantStructure(fk1.toString());
             MaintenanceModel maintenanceModel = new MaintenanceModel();
-            maintenanceModel.setNote(description);
-            maintenanceModel.setCause(description);
-            maintenanceModel.setCauseOfError(alert.getText());
+            maintenanceModel.setNote(thing.getDescription());
+            maintenanceModel.setCause(alert.getText());
+            maintenanceModel.setCauseOfError(stream.getDescription());
             maintenanceModel.setText(alert.getText());
             //maintenanceModel.setAuthor(this.getClass().getSimpleName());
             maintenanceModel.setJobDate(Instant.now());
@@ -115,17 +114,6 @@ public class ISPROAdapterImpl implements ISPROAdapter {
         return false;
     }
 
-    private Message<?> parsePayload(String payload) {
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            Message<?> result = mapper.readValue(payload, Message.class);
-            return result;
-        } catch (IOException e) {
-            e.printStackTrace();
-
-        }
-        return null;
-    }
 
     private boolean processISPROAlert(PlantStructure plant, MaintenanceModel model) {
         // always us this user to report maintenance alerts
@@ -148,5 +136,4 @@ public class ISPROAdapterImpl implements ISPROAdapter {
             return false;
         }
     }
-
 }

@@ -1,7 +1,5 @@
 package ipn;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.time.temporal.TemporalAmount;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -15,7 +13,7 @@ import ispro.model.json.TemporalAmountSerializer;
  * @author dglachs
  *
  */
-public class TimeRemaining extends Result {
+public class TimeRemaining extends IPNAlert {
 	
 	@JsonProperty("confidence")
 	private Double confidence;
@@ -49,15 +47,9 @@ public class TimeRemaining extends Result {
 	public void setRemainingTime(TemporalAmount remainingTime) {
 		this.remainingTime = remainingTime;
 	}
-	@Override
-	public RemainingTimeMessage createPayload(Long datastream, Instant phenomenon) {
-		RemainingTimeMessage message = new RemainingTimeMessage(this);
-		message.setDatastream(new Datastream(datastream));
-		message.setPhenonmenonTime(phenomenon);
-		message.setResultTime(Instant.now());
-		message.setValidTime(Duration.ofSeconds(30));
-		return message;
-
-	}
+    @Override
+    public String getAlertType() {
+        return "http://www.predictive.at/maintenance/remainingTime";
+    }
 
 }

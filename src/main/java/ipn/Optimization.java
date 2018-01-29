@@ -1,10 +1,8 @@
 package ipn;
 
-import java.time.Instant;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Optimization extends Result {
+public class Optimization extends IPNAlert {
 	@JsonProperty("currentValue")
 	private Double currentValue; 
 	@JsonProperty("targetValue")
@@ -22,9 +20,8 @@ public class Optimization extends Result {
 	public void setTargetValue(Double targetValue) {
 		this.targetValue = targetValue;
 	}
-	@Override
-	public Message<?> createPayload(Long datastream, Instant phenomenon) {
-		// TODO Auto-generated method stub
-		return null;
-	} 
+    @Override
+    public String getAlertType() {
+        return "http://www.predictive.at/maintenance/optimization";
+    }
 }
