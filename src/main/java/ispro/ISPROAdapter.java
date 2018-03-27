@@ -16,6 +16,7 @@ public class ISPROAdapter {
             new ToolsetClient()
                     .withServiceUri("http://il060:8082/v1.0/")
                     .setName("ISPROClient")
+                    .forThing(1l)
                     .registerHandler(new ISPROHandler(), 30l)
                     .startup();
         } catch (MalformedURLException | URISyntaxException e1) {
