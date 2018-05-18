@@ -20,6 +20,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 @JsonInclude(value=Include.NON_NULL)
 public abstract class IPNAlert {
+    @JsonProperty("ipnKey")
+    private String ipnKey;
     @JsonProperty("text")
     private String text;
     public IPNAlert() {}
@@ -35,4 +37,12 @@ public abstract class IPNAlert {
         this.text = text;
     }
     public abstract String getAlertType();
+
+    public String getIpnKey() {
+        return ipnKey;
+    }
+
+    public void setIpnKey(String ipnKey) {
+        this.ipnKey = ipnKey;
+    }
 }

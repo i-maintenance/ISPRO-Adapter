@@ -74,6 +74,9 @@ public class ISPROSensorHandler extends AbstractObservationHandler<Double> {
             SensorValueModel sensorValue = new SensorValueModel();
             sensorName = new SensorNameModel(); 
             sensorName.setVariableName(stream.getObservedProperty().getName()); // TODO: use sensor name from observed property
+            if ( sensorName.getVariableName().startsWith("Temp")) {
+                sensorName.setVariableName("temp");
+            }
             sensorValue.setValue(value);
             sensorValue.setDate(observation.getPhenomenonTime().getAsDateTime().toInstant());
 
