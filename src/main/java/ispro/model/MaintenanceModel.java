@@ -25,6 +25,9 @@ public class MaintenanceModel {
 	private MaintenanceType maintenanceType = MaintenanceType.Wartung;
 	private int priority  = 1;
 	private String author = "";
+	private long remainingTime = 0;
+	private double confidence = 0.0;
+	private String externalAlertKey;
 	
 	public int getId() {
 		return id;
@@ -95,5 +98,23 @@ public class MaintenanceModel {
 	public void setAuthor(String author) {
 		this.author = author;
 	}
+    public long getRemainingTime() {
+        return remainingTime;
+    }
+    public void setRemainingTime(long remainingTime) {
+        this.remainingTime = remainingTime;
+    }
+    public double getConfidence() {
+        return confidence;
+    }
+    public void setConfidence(double confidence) {
+        this.confidence = confidence;
+    }
+    public String getExternalAlertKey() {
+        return externalAlertKey;
+    }
+    public void setExternalAlertKey(String externalAlertKey) {
+        this.externalAlertKey = externalAlertKey;
+    }
 	
 }
